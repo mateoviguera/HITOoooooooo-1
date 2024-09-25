@@ -1,0 +1,285 @@
+---
+title: "Proyecto Gestión Financiera"
+author: "Mateo Viguera"
+format: html
+editor: visual
+bibliography: references.bib
+lang: es-CL
+---
+
+```{r configuraciones}
+#| message: false
+#| echo: false
+# Esto ya debiera estar cargado en el proyecto en posit.cloud
+#devtools::install_github("business-science/tidyquant")
+#Loads tidyquant, lubridate, xts, quantmod, TTR, and PerformanceAnalytics
+library(tidyverse)
+library(tidyquant)  
+```
+
+# Hito 1:
+
+## Descripción Activo y Contexto
+
+Fecha de entrega límite: Miércoles 25 de Septiembre 23:59.
+
+### Definición
+
+El activo elegido fue Tesla, Inc. (TSLA). Tesla es una de las compañías líderes en el sector de vehículos eléctricos y energía renovable. Fundada por Elon Musk, ha revolucionado la industria automotriz con sus avances en vehículos eléctricos (EV), baterías y soluciones de energía solar. Según un estudio de McKinsey (2023), el mercado de vehículos eléctricos ha crecido un 30% en los últimos cinco años, posicionando a Tesla como el líder en innovación y producción a nivel global.
+
+Tesla también es conocida por su enfoque en la sostenibilidad y la tecnología avanzada, con el objetivo de acelerar la transición hacia energías limpias. Sus productos más destacados incluyen una línea de vehículos eléctricos, el sistema de almacenamiento de energía Powerwall y paneles solares.
+
+Tesla compite en el mercado de vehículos eléctricos con varias compañías, entre las cuales destacan Ford (F), General Motors (GM), Lucid Motors (LCID), Rivian (RIVN), NIO (NIO), XPeng (XPEV), y Li Auto (LI). Estas empresas están desarrollando vehículos eléctricos y tecnologías avanzadas para competir en el mercado global de EVs.
+
+```{r ETL}
+#| echo: false
+end <- as_date("2024-12-20")
+# Obtener precios de Tesla y sus competidores
+TSLA <- tq_get("TSLA", get = "stock.prices", from = "2017-01-01", to = end) %>% mutate(symbol = "TSLA")
+FORD <- tq_get("F", get = "stock.prices", from = "2017-01-01", to = end) %>% mutate(symbol = "FORD")
+GM <- tq_get("GM", get = "stock.prices", from = "2017-01-01", to = end) %>% mutate(symbol = "GM")
+LCID <- tq_get("LCID", get = "stock.prices", from = "2021-01-01", to = end) %>% mutate(symbol = "LCID") # Lucid es relativamente nueva
+RIVN <- tq_get("RIVN", get = "stock.prices", from = "2021-01-01", to = end) %>% mutate(symbol = "RIVN") # Rivian también es reciente
+NIO <- tq_get("NIO", get = "stock.prices", from = "2017-01-01", to = end) %>% mutate(symbol = "NIO")
+XPEV <- tq_get("XPEV", get = "stock.prices", from = "2020-01-01", to = end) %>% mutate(symbol = "XPEV")
+LI <- tq_get("LI", get = "stock.prices", from = "2020-01-01", to = end) %>% mutate(symbol = "LI")
+
+# Combinar todas las acciones en un solo data frame
+competitors <- rbind(TSLA, FORD, GM, LCID, RIVN, NIO, XPEV, LI)
+
+# Visualizar las acciones
+# Visualizar las acciones de Tesla y competidores en un solo gráfico
+competitors %>%
+  ggplot(aes(x = date, y = close, color = symbol)) +
+  geom_line() +
+  scale_y_log10() +  # Escala logarítmica para manejar grandes diferencias en los precios
+  labs(title = "Precios Históricos de Tesla y Competidores (Escala Logarítmica)", 
+       y = "Precio de Cierre (log)", x = "") + 
+  theme_tq()
+
+
+```
+
+Por otro lado, también es de suma importancia tener en consideración los precios históricos del activo TESLA, el cual actualmente tiene un valor promedio para el intervalo de años 2017-presente igual a `r round(mean(TSLA$close),digits=0)`. A continuación se presentan dos gráficos que muestran estos datos históricos:
+
+```{r TSLA}
+#| echo: false
+TSLA %>%
+    ggplot(aes(x = date, y = close)) +
+    geom_line() +
+    labs(title = "Tesla Line Chart", y = "Precio de Cierre", x = "") + 
+    theme_tq() +
+    geom_hline(yintercept=mean(TSLA$close), linetype="dashed", color = "red")
+```
+
+```{r TSLAcandle}
+#| warning: false
+TSLA %>%
+    ggplot(aes(x = date, y = close)) +
+    geom_candlestick(aes(open = open, high = high, low = low, close = close)) +
+    labs(title = "Tesla Candlestick Chart", y = "Closing Price", x = "") +
+    theme_tq()
+
+```
+
+### Motivación
+
+Se escogió a Tesla por su liderazgo en el mercado de vehículos eléctricos y su compromiso con la sostenibilidad y las tecnologías limpias. Tesla ha establecido objetivos ambiciosos, como incrementar su producción global de vehículos eléctricos y expandir su red de estaciones de carga rápida (Supercharger).
+
+Estudios recientes, como el "Reporte de Energía Limpia" de Bloomberg (2023), destacan que Tesla se encuentra a la vanguardia en la adopción de energías renovables y en la reducción de emisiones de carbono, lo que la convierte en una empresa atractiva para estudios financieros en el contexto de sostenibilidad.
+
+### Contexto
+
+El mercado de vehículos eléctricos está creciendo a nivel mundial y se espera que este crecimiento continúe debido al aumento de las regulaciones ambientales, los incentivos gubernamentales y la mayor demanda de consumidores por vehículos más ecológicos. Tesla, como uno de los líderes en este sector, ha visto un crecimiento significativo en su valor de mercado, pero también enfrenta una competencia creciente de empresas tanto en Estados Unidos como en China.
+
+En este contexto, empresas como Ford y GM están invirtiendo fuertemente en el desarrollo de vehículos eléctricos. Ford ha lanzado su popular Ford Mustang Mach-E y su línea de camiones eléctricos, mientras que GM ha anunciado planes para convertirse en un fabricante de automóviles completamente eléctricos en las próximas décadas.
+
+En el mercado chino, NIO, XPeng, y Li Auto están desarrollando soluciones innovadoras en vehículos eléctricos y tecnologías autónomas, lo que convierte a este mercado en un área de gran interés para inversores y analistas.
+
+```{r context}
+#| warning: false
+#| echo: false
+
+# Definir el periodo de tiempo de los últimos 6 meses basado en la fecha más reciente disponible
+# Definir el periodo de tiempo de los últimos 3 meses basado en la fecha más reciente disponible
+start <- end - months(6)
+
+# Filtrar datos para mostrar solo los últimos 3 meses de precios de cierre
+filtered_competitors <- competitors %>%
+    filter(date >= start)
+
+# Verificar la primera y última fecha disponible para cada símbolo
+filtered_competitors %>%
+  group_by(symbol) %>%
+  summarise(first_date = min(date, na.rm = TRUE), last_date = max(date, na.rm = TRUE)) %>%
+  print()
+
+# Calcular la variación porcentual respecto al primer valor disponible en el período
+filtered_competitors <- filtered_competitors %>%
+  group_by(symbol) %>%
+  mutate(percentage_change = (close / first(close) - 1) * 100)
+
+# Ajustar el gráfico para los últimos 3 meses desde la fecha más reciente disponible
+filtered_competitors %>%
+  ggplot(aes(x = date, y = percentage_change, color = symbol, group = symbol)) +
+  geom_line() +
+  labs(title = "Variación Porcentual de Tesla y Competidores", 
+       subtitle = "Últimos 3 meses",
+       y = "Variación Porcentual (%)", x = "") + 
+  coord_x_date(xlim = c(start, max(filtered_competitors$date))) +  # Asegura que cubre los últimos 3 meses
+  theme_tq()
+
+
+
+
+
+
+```
+
+Si bien los montos de los precios de Tesla dependen de varios factores, como la cantidad de acciones que componen la compañía y las condiciones del mercado de vehículos eléctricos (EV), se observan tendencias significativas al compararla con sus competidores. Una tendencia clara es que el precio de Tesla sigue un patrón de crecimiento sostenido a lo largo de los últimos años, impulsado principalmente por su expansión en la producción de vehículos eléctricos y tecnologías de energía renovable. Sin embargo, cuando el precio de Tesla aumenta, competidores como Lucid Motors (LCID) y Rivian (RIVN) tienden a experimentar caídas en sus precios. Esto puede deberse a que la mayor participación de Tesla en el mercado reduce las oportunidades de crecimiento de sus competidores, lo que provoca una respuesta inversa en sus valoraciones bursátiles.
+
+Además, es interesante observar las rentabilidades que ha tenido el activo de Tesla. Tesla ha presentado un alto nivel de rentabilidad en los últimos años, aunque con notoria volatilidad. Por ejemplo, los márgenes operativos de Tesla han mostrado una mejora considerable, especialmente a medida que la empresa ha incrementado su producción en fábricas clave como las de Shanghái y Berlín. Sin embargo, factores como el aumento en los precios del litio y otras materias primas han introducido desafíos en el control de costos.
+
+Rentabilidad de Tesla: A partir del análisis, se puede observar que Tesla ha mantenido una tendencia general de crecimiento, aunque con fluctuaciones marcadas debido a factores externos como los desafíos en la cadena de suministro global y la competencia creciente en el sector de los vehículos eléctricos. Se espera que Tesla continúe su expansión en el futuro, con estimaciones de crecimiento impulsadas por su liderazgo en innovación tecnológica y su integración vertical en la producción de baterías(Bradley).
+
+### Modelo Binomial
+
+El Modelo Binomial de Valoración de Opciones (BM, por sus siglas en inglés) también conocido como Cox-Ross-Rubinstein introducido en @cox1979, es un modelo que estima el valor de una opción en t=0 teniendo pagos futuros en diferentes estados (usualmente "Up" y "Down"). Este Modelo Binomial asume que no hay posibilidad de arbitraje en el mercado, determinando el precio que sigue un activo en un random walk, en donde en cada paso (tiempo) existe una probabilidad de que el precio suba o baje (Ahmad, 2018).
+
+Para calcular la valoración de la opción con el Modelo Binomial, es necesario definir $S_0$, que corresponde al precio actual del activo. Además, se deben determinar los valores de $u$ y $d$, que representan los factores por los cuales se multiplica $S_0$ en cada estado para obtener el precio del activo en cada caso en el siguiente período (t = 1):
+
+$$
+S_1 = \begin{cases}    S_0\cdot u \text{ en el estado ``Up"} \\    
+S_0\cdot d \text{ en el estado ``Down"}\end{cases}
+$$
+
+También se debe calcular la probabilidad $P$ de que ocurra el caso "Up", la probabilidad de que ocurra el otro caso ("Down") simplemete quedaría en $(1-P)$. Para el calculo de la porobabilidad se usa la siguiente ecuación:
+
+$$
+P = \frac{e^r-d}{u-d}
+$$
+
+Donde $r$ es la tasa libre de riesgo.
+
+Por otro lado se deben calcular $C_u$ y $C_d$ los cuales se obtienen como los precios de una opción europea:
+
+$$
+C_u = max(0, S_0\cdot u-k)\\
+C_d = max(0, S_0\cdot d-k)
+$$
+
+Finalmente el precio de la opción se calcula de la siguiente manera:
+
+$$
+V = \frac{C_u\cdot P + C_d\cdot (1-P)}{1+r}
+$$
+
+```{r}
+binomial_model <- function(cu, p, cd, rf) {
+  return((cu * p + cd * (1 - p)) / (1 + rf))
+}
+
+# Precio actual de Tesla
+S <- tail(TSLA$close, 1)  
+K <- 300  # Precio de ejercicio de la opción
+T <- 89 / 365  # Tiempo hasta la expiración (en años)
+r <- 0.0642  # Tasa de interés libre de riesgo
+
+# Calcular volatilidad basada en tus datos históricos
+sigma <- 0.6008  # Volatilidad de Tesla
+delta_t <- T  # El tiempo en años
+
+# Calcular los nuevos valores de u y d basados en la volatilidad
+u <- exp(sigma * sqrt(delta_t))
+d <- 1 / u
+
+# Recalcular la probabilidad P
+p <- (exp(r * delta_t) - d) / (u - d)
+
+# Calcular los precios proyectados en los estados "Up" y "Down"
+Su <- S * u
+Sd <- S * d
+
+# Calcular los valores de la opción en los estados "Up" y "Down"
+cu <- max(Su - K, 0)
+cd <- max(Sd - K, 0)
+
+# Imprimir las variables clave para revisar
+print(paste("Precio actual de Tesla:", S))
+print(paste("Su (precio 'Up'):", Su))
+print(paste("Sd (precio 'Down'):", Sd))
+print(paste("Cu (valor de la opción 'Up'):", cu))
+print(paste("Cd (valor de la opción 'Down'):", cd))
+
+# Calcular el precio de la opción usando el Modelo Binomial
+precio_opcion_binomial <- binomial_model(cu, p, cd, r)
+print(paste("El precio de la opción con el Modelo Binomial es", precio_opcion_binomial))
+
+
+```
+
+### Modelo Black and Scholes (BS)
+
+El Modelo Black-Scholes es otro modelo comúnmente utilizado para la valoración de opciones, especialmente para opciones europeas. Tesla, al igual que otras empresas tecnológicas y automotrices, presenta una volatilidad significativa debido a la naturaleza del mercado de vehículos eléctricos y la competencia.
+
+Al usar el Modelo Black-Scholes, es posible calcular el precio de una opción de compra para Tesla, tomando en cuenta factores como la volatilidad, el precio de ejercicio, y la tasa de interés libre de riesgo. En el análisis presentado, este modelo se ha aplicado tanto a Tesla como a sus competidores para comparar cómo varían los precios de las opciones en diferentes empresas del sector de vehículos eléctricos.
+
+```{r}
+black_scholes <- function(S, K, t, r, sigma) {
+    d1 <- (log(S / K) + (r + 0.5 * sigma^2) * t) / (sigma * sqrt(t))
+    d2 <- d1 - sigma * sqrt(t)
+    N_d1 <- pnorm(d1)
+    N_d2 <- pnorm(d2)
+    precio_call <- S * N_d1 - K * exp(-r * t) * N_d2
+    return(precio_call)
+}
+  
+rendimientos <- diff(log(TSLA$close))
+sigma <- 0.6008  # Volatilidad para el strike de 300 USD
+
+S <- tail(TSLA$close, 1)  # Precio actual del activo subyacente
+K <- 300  # Precio de ejercicio de la opción
+R <- 0.0642  # Tasa de interés libre de riesgo
+t <- 89 / 365  # Tiempo hasta la expiración (en años) 20 diciembre 2024
+
+print(paste("El precio de la opción con el Modelo Black-Scholes es ", black_scholes(S, K, t, R, sigma)))
+
+
+
+```
+
+### Comparación de modelos
+
+Ambos modelos, el Modelo Binomial y el Modelo Black-Scholes, son útiles para valorar opciones sobre las acciones de Tesla y sus competidores. Sin embargo, tienen diferencias clave:
+
+El Modelo Binomial ofrece mayor flexibilidad en la evaluación de opciones americanas, mientras que Black-Scholes es ideal para opciones europeas. El Modelo Binomial permite un enfoque discreto en la evolución del precio, mientras que Black-Scholes sigue una distribución lognormal. Ambos modelos ofrecen herramientas importantes para inversores que buscan estimar el valor de las opciones en empresas del mercado de vehículos eléctricos, como Tesla, Ford, GM, y sus competidores.
+
+Estos modelos difieren en algunas cosas, tales como:
+
+-   Precio del activo subyacente: En modelo Black and Scholes sigue una distribución lognormal mientras que el Binomial multiplica el valos $S_0$ con dos opciones ($u$ y $d$)
+
+-   Debido a lo anterior, el modelo de Black and Scholes es continuo y el Binomial discreto.
+
+-   El modelo BS sirve solo para opciones europeas, mientras que el Binomial también sirve para opciones americanas.
+
+También tienen algunas similitudes:
+
+-   Ambos utilizan el precio actual del activo subyacente.
+
+-   Ambos usan la tasa libre de riesgo.
+
+-   En este caso los dos se usaron para un periodo de tiempo.
+
+-   Ambos consideran la volatilidad del activo.
+
+En el análisis realizado, se calcularon los precios de una opción usando dos métodos diferentes: el modelo binomial y el modelo Black-Scholes. Aquí están los puntos clave y la conclusión de los resultados:
+
+1.  Modelo Binomial: El precio calculado para la opción utilizando este modelo fue 19.47 USD. El modelo binomial, al dividir el tiempo hasta el vencimiento en varios pasos, considera múltiples escenarios de variación en el precio del activo subyacente (Tesla) y permite tener en cuenta las posibilidades de precios tanto al alza como a la baja. En este caso, el precio "Up" del activo fue 345.79 USD y el precio "Down" fue 191.04 USD. Además, el valor de la opción en el escenario "Up" fue 45.79 USD, mientras que en el escenario "Down" el valor de la opción fue 0 USD, reflejando una posible pérdida total en caso de que el precio baje significativamente.
+
+2.  Modelo Black-Scholes: El precio calculado utilizando el modelo Black-Scholes fue 16.88 USD. Este modelo es más simple y asume un mercado ideal (sin dividendos, volatilidad constante, etc.). El resultado es ligeramente menor que el obtenido con el modelo binomial. La volatilidad utilizada para este cálculo fue del 60.08%, y la tasa libre de riesgo fue del 6.42%. Con estos parámetros, el precio actual del activo subyacente (Tesla) fue de 257.02 USD y el precio de ejercicio fue de 300 USD, con un tiempo hasta la expiración de 89 días.
+
+### Conclusión:
+
+El modelo binomial arroja un precio de la opción más alto que el modelo Black-Scholes debido a su capacidad de capturar una mayor gama de posibles movimientos del precio del activo subyacente. El modelo binomial tiene la ventaja de ser más flexible y realista para escenarios donde se pueden ejercer opciones antes del vencimiento (como en opciones americanas). Sin embargo, el modelo Black-Scholes es más directo y ofrece una buena aproximación cuando las condiciones de mercado son más predecibles o ideales.
+
+Ambos modelos muestran precios cercanos para la opción, con una diferencia de aproximadamente 2.59 USD, lo cual es una diferencia moderada, considerando las condiciones de volatilidad y el precio de ejercicio.
